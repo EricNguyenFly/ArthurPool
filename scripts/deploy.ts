@@ -7,6 +7,10 @@ import {
 	MerlinPoolFactory,
 	NFTPoolFactory__factory,
 	NFTPoolFactory,
+	YieldBooster__factory,
+	YieldBooster,
+	PositionHelper__factory,
+	PositionHelper
 } from "../typechain-types";
 
 async function main() {
@@ -25,23 +29,39 @@ async function main() {
 	const ArthurMaster: ArthurMaster__factory = await hre.ethers.getContractFactory("ArthurMaster");
 	const MerlinPoolFactory: MerlinPoolFactory__factory = await hre.ethers.getContractFactory("MerlinPoolFactory");
 	const NFTPoolFactory: NFTPoolFactory__factory = await hre.ethers.getContractFactory("NFTPoolFactory");
+	const YieldBooster: YieldBooster__factory = await hre.ethers.getContractFactory("YieldBooster");
+	const PositionHelper: PositionHelper__factory = await hre.ethers.getContractFactory("PositionHelper");
 
 	//* Deploy contracts */
 	console.log("================================================================================");
 	console.log("DEPLOYING CONTRACTS");
 	console.log("================================================================================");
 
-	const arthurMaster = await ArthurMaster.deploy("", "") as ArthurMaster;
+	const startTime = 0;
+	const arthurRouter = "";
+	const weth = "";
+	const grailToken = "";
+	const xGrailToken = "";
+
+	const arthurMaster = await ArthurMaster.deploy(grailToken, startTime) as ArthurMaster;
 	await arthurMaster.deployed();
 	console.log("ArthurMaster                          deployed to:>>", arthurMaster.address);
 
-	const merlinPoolFactory = await MerlinPoolFactory.deploy("", "", "", "") as MerlinPoolFactory;
+	const merlinPoolFactory = await MerlinPoolFactory.deploy(grailToken, xGrailToken, accounts[0].address, accounts[0].address) as MerlinPoolFactory;
 	await merlinPoolFactory.deployed();
 	console.log("MerlinPoolFactory                          deployed to:>>", merlinPoolFactory.address);
 
-	const nftPoolFactory = await NFTPoolFactory.deploy(arthurMaster.address, "", "") as NFTPoolFactory;
+	const nftPoolFactory = await NFTPoolFactory.deploy(arthurMaster.address, grailToken, xGrailToken) as NFTPoolFactory;
 	await nftPoolFactory.deployed();
 	console.log("NFTPoolFactory                          deployed to:>>", nftPoolFactory.address);
+
+	const yieldBooster = await YieldBooster.deploy(xGrailToken) as YieldBooster;
+	await yieldBooster.deployed();
+	console.log("YieldBooster                          deployed to:>>", yieldBooster.address);
+
+	const positionHelper = await PositionHelper.deploy(arthurRouter, weth) as PositionHelper;
+	await positionHelper.deployed();
+	console.log("PositionHelper                          deployed to:>>", positionHelper.address);
 
 	console.log("================================================================================");
 	console.log("DONE");
@@ -50,7 +70,9 @@ async function main() {
 	const contracts = {
 		arthurMaster: arthurMaster.address,
 		merlinPoolFactory: merlinPoolFactory.address,
-		nftPoolFactory: nftPoolFactory.address
+		nftPoolFactory: nftPoolFactory.address,
+		yieldBooster: yieldBooster.address,
+		positionHelper: positionHelper.address
 	};
 
 	await fs.writeFileSync("contracts.json", JSON.stringify(contracts));
@@ -58,7 +80,9 @@ async function main() {
 	const contractVerify = {
 		arthurMaster: arthurMaster.address,
 		merlinPoolFactory: merlinPoolFactory.address,
-		nftPoolFactory: nftPoolFactory.address
+		nftPoolFactory: nftPoolFactory.address,
+		yieldBooster: yieldBooster.address,
+		positionHelper: positionHelper.address
 	};
 
 	await fs.writeFileSync("contracts-verify.json", JSON.stringify(contractVerify));
@@ -66,21 +90,35 @@ async function main() {
 	await hre
 		.run("verify:verify", {
 			address: arthurMaster.address,
-			constructorArguments: ["", ""]
+			constructorArguments: [grailToken, startTime]
 		})
 		.catch(console.log);
 
 	await hre
 		.run("verify:verify", {
 			address: merlinPoolFactory.address,
-			constructorArguments: ["", "", "", ""]
+			constructorArguments: [grailToken, xGrailToken, accounts[0].address, accounts[0].address]
 		})
 		.catch(console.log);
 
 	await hre
 		.run("verify:verify", {
 			address: nftPoolFactory.address,
-			constructorArguments: [arthurMaster.address, "", ""]
+			constructorArguments: [arthurMaster.address, grailToken, xGrailToken]
+		})
+		.catch(console.log);
+
+	await hre
+		.run("verify:verify", {
+			address: yieldBooster.address,
+			constructorArguments: [xGrailToken]
+		})
+		.catch(console.log);
+
+	await hre
+		.run("verify:verify", {
+			address: positionHelper.address,
+			constructorArguments: [arthurRouter, weth]
 		})
 		.catch(console.log);
 }
