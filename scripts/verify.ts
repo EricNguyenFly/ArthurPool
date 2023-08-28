@@ -11,11 +11,12 @@ async function main() {
     "========================================================================================="
   );
 
-  // await hre
-  //     .run("verify:verify", {
-  //       address: "0x68b829085DD6B218523C38A387E93AC96e5951C3"
-  //     })
-  //     .catch(console.log);
+  await hre
+    .run("verify:verify", {
+      address: contracts.arthurMaster,
+      constructorArguments: [contracts.grailToken, "1693202400"]
+    })
+    .catch(console.log);
 
 }
 
