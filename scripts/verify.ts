@@ -14,7 +14,7 @@ async function main() {
   await hre
     .run("verify:verify", {
       address: contracts.arthurMaster,
-      constructorArguments: [contracts.grailToken, "1693202400"]
+      constructorArguments: [contracts.artToken, "1693202400"]
     })
     .catch(console.log);
 

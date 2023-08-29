@@ -6,18 +6,18 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./interfaces/tokens/IGrailTokenV2.sol";
+import "./interfaces/tokens/IArtTokenV2.sol";
 
 
 /*
- * GRAIL is Arthur's native ERC20 token.
+ * ART is Arthur's native ERC20 token.
  * It has an hard cap and manages its own emissions and allocations.
  */
-contract GrailTokenV2 is Ownable, ERC20("Arthur token", "GRAIL"), IGrailTokenV2 {
+contract ArtTokenV2 is Ownable, ERC20("Arthur token", "ART"), IArtTokenV2 {
   using SafeMath for uint256;
 
   uint256 public constant MAX_EMISSION_RATE = 0.01 ether;
-  uint256 public constant MAX_SUPPLY_LIMIT = 200000 ether;
+  uint256 public constant MAX_SUPPLY_LIMIT = 10_000_000 ether;
   uint256 public elasticMaxSupply; // Once deployed, controlled through governance only
   uint256 public emissionRate; // Token emission per second
 
@@ -69,7 +69,7 @@ contract GrailTokenV2 is Ownable, ERC20("Arthur token", "GRAIL"), IGrailTokenV2 
    * @dev Throws error if called by any account other than the master
    */
   modifier onlyMaster() {
-    require(msg.sender == masterAddress, "GrailToken: caller is not the master");
+    require(msg.sender == masterAddress, "ArtToken: caller is not the master");
     _;
   }
 
@@ -175,7 +175,7 @@ contract GrailTokenV2 is Ownable, ERC20("Arthur token", "GRAIL"), IGrailTokenV2 
   }
 
   /**
-   * @dev Burns "amount" of GRAIL by sending it to BURN_ADDRESS
+   * @dev Burns "amount" of ART by sending it to BURN_ADDRESS
    */
   function burn(uint256 amount) external override {
     _transfer(msg.sender, BURN_ADDRESS, amount);
@@ -234,7 +234,7 @@ contract GrailTokenV2 is Ownable, ERC20("Arthur token", "GRAIL"), IGrailTokenV2 
   }
 
   /**
-   * @dev Updates GRAIL emission rate per second
+   * @dev Updates ART emission rate per second
    *
    * Must only be called by the owner
    */
@@ -249,7 +249,7 @@ contract GrailTokenV2 is Ownable, ERC20("Arthur token", "GRAIL"), IGrailTokenV2 
   }
 
   /**
-   * @dev Updates GRAIL max supply
+   * @dev Updates ART max supply
    *
    * Must only be called by the owner
    */

@@ -8,46 +8,46 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import "./interfaces/tokens/IGrailTokenV2.sol";
-import "./interfaces/tokens/IXGrailToken.sol";
-import "./interfaces/IXGrailTokenUsage.sol";
+import "./interfaces/tokens/IArtTokenV2.sol";
+import "./interfaces/tokens/IXArtToken.sol";
+import "./interfaces/IXArtTokenUsage.sol";
 
 
 /*
- * xGRAIL is Arthur's escrowed governance token obtainable by converting GRAIL to it
+ * xART is Arthur's escrowed governance token obtainable by converting ART to it
  * It's non-transferable, except from/to whitelisted addresses
- * It can be converted back to GRAIL through a vesting process
- * This contract is made to receive xGRAIL deposits from users in order to allocate them to Usages (plugins) contracts
+ * It can be converted back to ART through a vesting process
+ * This contract is made to receive xART deposits from users in order to allocate them to Usages (plugins) contracts
  */
-contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token", "xGRAIL"), IXGrailToken {
+contract XArtToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token", "xART"), IXArtToken {
   using Address for address;
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
-  using SafeERC20 for IGrailTokenV2;
+  using SafeERC20 for IArtTokenV2;
 
-  struct XGrailBalance {
-    uint256 allocatedAmount; // Amount of xGRAIL allocated to a Usage
-    uint256 redeemingAmount; // Total amount of xGRAIL currently being redeemed
+  struct XArtBalance {
+    uint256 allocatedAmount; // Amount of xART allocated to a Usage
+    uint256 redeemingAmount; // Total amount of xART currently being redeemed
   }
 
   struct RedeemInfo {
-    uint256 grailAmount; // GRAIL amount to receive when vesting has ended
-    uint256 xGrailAmount; // xGRAIL amount to redeem
+    uint256 artAmount; // ART amount to receive when vesting has ended
+    uint256 xArtAmount; // xART amount to redeem
     uint256 endTime;
-    IXGrailTokenUsage dividendsAddress;
-    uint256 dividendsAllocation; // Share of redeeming xGRAIL to allocate to the Dividends Usage contract
+    IXArtTokenUsage dividendsAddress;
+    uint256 dividendsAllocation; // Share of redeeming xART to allocate to the Dividends Usage contract
   }
 
-  IGrailTokenV2 public immutable grailToken; // GRAIL token to convert to/from
-  IXGrailTokenUsage public dividendsAddress; // Arthur dividends contract
+  IArtTokenV2 public immutable artToken; // ART token to convert to/from
+  IXArtTokenUsage public dividendsAddress; // Arthur dividends contract
 
-  EnumerableSet.AddressSet private _transferWhitelist; // addresses allowed to send/receive xGRAIL
+  EnumerableSet.AddressSet private _transferWhitelist; // addresses allowed to send/receive xART
 
-  mapping(address => mapping(address => uint256)) public usageApprovals; // Usage approvals to allocate xGRAIL
-  mapping(address => mapping(address => uint256)) public override usageAllocations; // Active xGRAIL allocations to usages
+  mapping(address => mapping(address => uint256)) public usageApprovals; // Usage approvals to allocate xART
+  mapping(address => mapping(address => uint256)) public override usageAllocations; // Active xART allocations to usages
 
   uint256 public constant MAX_DEALLOCATION_FEE = 200; // 2%
-  mapping(address => uint256) public usagesDeallocationFee; // Fee paid when deallocating xGRAIL
+  mapping(address => uint256) public usagesDeallocationFee; // Fee paid when deallocating xART
 
   uint256 public constant MAX_FIXED_RATIO = 100; // 100%
 
@@ -56,15 +56,15 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   uint256 public maxRedeemRatio = 100; // 1:1
   uint256 public minRedeemDuration = 15 days; // 1296000s
   uint256 public maxRedeemDuration = 90 days; // 7776000s
-  // Adjusted dividends rewards for redeeming xGRAIL
+  // Adjusted dividends rewards for redeeming xART
   uint256 public redeemDividendsAdjustment = 50; // 50%
 
-  mapping(address => XGrailBalance) public xGrailBalances; // User's xGRAIL balances
+  mapping(address => XArtBalance) public xArtBalances; // User's xART balances
   mapping(address => RedeemInfo[]) public userRedeems; // User's redeeming instances
 
 
-  constructor(IGrailTokenV2 grailToken_) {
-    grailToken = grailToken_;
+  constructor(IArtTokenV2 artToken_) {
+    artToken = artToken_;
     _transferWhitelist.add(address(this));
   }
 
@@ -78,9 +78,9 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   event UpdateDividendsAddress(address previousDividendsAddress, address newDividendsAddress);
   event UpdateDeallocationFee(address indexed usageAddress, uint256 fee);
   event SetTransferWhitelist(address account, bool add);
-  event Redeem(address indexed userAddress, uint256 xGrailAmount, uint256 grailAmount, uint256 duration);
-  event FinalizeRedeem(address indexed userAddress, uint256 xGrailAmount, uint256 grailAmount);
-  event CancelRedeem(address indexed userAddress, uint256 xGrailAmount);
+  event Redeem(address indexed userAddress, uint256 xArtAmount, uint256 artAmount, uint256 duration);
+  event FinalizeRedeem(address indexed userAddress, uint256 xArtAmount, uint256 artAmount);
+  event CancelRedeem(address indexed userAddress, uint256 xArtAmount);
   event UpdateRedeemDividendsAddress(address indexed userAddress, uint256 redeemIndex, address previousDividendsAddress, address newDividendsAddress);
   event Allocate(address indexed userAddress, address indexed usageAddress, uint256 amount);
   event Deallocate(address indexed userAddress, address indexed usageAddress, uint256 amount, uint256 fee);
@@ -102,17 +102,17 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   /**************************************************/
 
   /*
-   * @dev Returns user's xGRAIL balances
+   * @dev Returns user's xART balances
    */
-  function getXGrailBalance(address userAddress) external view returns (uint256 allocatedAmount, uint256 redeemingAmount) {
-    XGrailBalance storage balance = xGrailBalances[userAddress];
+  function getXArtBalance(address userAddress) external view returns (uint256 allocatedAmount, uint256 redeemingAmount) {
+    XArtBalance storage balance = xArtBalances[userAddress];
     return (balance.allocatedAmount, balance.redeemingAmount);
   }
 
   /*
-   * @dev returns redeemable GRAIL for "amount" of xGRAIL vested for "duration" seconds
+   * @dev returns redeemable ART for "amount" of xART vested for "duration" seconds
    */
-  function getGrailByVestingDuration(uint256 amount, uint256 duration) public view returns (uint256) {
+  function getArtByVestingDuration(uint256 amount, uint256 duration) public view returns (uint256) {
     if(duration < minRedeemDuration) {
       return 0;
     }
@@ -140,20 +140,20 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   /**
    * @dev returns "userAddress" info for a pending redeem identified by "redeemIndex"
    */
-  function getUserRedeem(address userAddress, uint256 redeemIndex) external view validateRedeem(userAddress, redeemIndex) returns (uint256 grailAmount, uint256 xGrailAmount, uint256 endTime, address dividendsContract, uint256 dividendsAllocation) {
+  function getUserRedeem(address userAddress, uint256 redeemIndex) external view validateRedeem(userAddress, redeemIndex) returns (uint256 artAmount, uint256 xArtAmount, uint256 endTime, address dividendsContract, uint256 dividendsAllocation) {
     RedeemInfo storage _redeem = userRedeems[userAddress][redeemIndex];
-    return (_redeem.grailAmount, _redeem.xGrailAmount, _redeem.endTime, address(_redeem.dividendsAddress), _redeem.dividendsAllocation);
+    return (_redeem.artAmount, _redeem.xArtAmount, _redeem.endTime, address(_redeem.dividendsAddress), _redeem.dividendsAllocation);
   }
 
   /**
-   * @dev returns approved xGrail to allocate from "userAddress" to "usageAddress"
+   * @dev returns approved xArt to allocate from "userAddress" to "usageAddress"
    */
   function getUsageApproval(address userAddress, address usageAddress) external view returns (uint256) {
     return usageApprovals[userAddress][usageAddress];
   }
 
   /**
-   * @dev returns allocated xGrail from "userAddress" to "usageAddress"
+   * @dev returns allocated xArt from "userAddress" to "usageAddress"
    */
   function getUsageAllocation(address userAddress, address usageAddress) external view returns (uint256) {
     return usageAllocations[userAddress][usageAddress];
@@ -174,7 +174,7 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   }
 
   /**
-   * @dev returns if "account" is allowed to send/receive xGRAIL
+   * @dev returns if "account" is allowed to send/receive xART
    */
   function isTransferWhitelisted(address account) external override view returns (bool) {
     return _transferWhitelist.contains(account);
@@ -209,7 +209,7 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
    *
    * Must only be called by owner
    */
-  function updateDividendsAddress(IXGrailTokenUsage dividendsAddress_) external onlyOwner {
+  function updateDividendsAddress(IXArtTokenUsage dividendsAddress_) external onlyOwner {
     // if set to 0, also set divs earnings while redeeming to 0
     if(address(dividendsAddress_) == address(0)) {
       redeemDividendsAdjustment = 0;
@@ -233,7 +233,7 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
    * @dev Adds or removes addresses from the transferWhitelist
    */
   function updateTransferWhitelist(address account, bool add) external onlyOwner {
-    require(account != address(this), "updateTransferWhitelist: Cannot remove xGrail from whitelist");
+    require(account != address(this), "updateTransferWhitelist: Cannot remove xArt from whitelist");
 
     if(add) _transferWhitelist.add(account);
     else _transferWhitelist.remove(account);
@@ -246,9 +246,9 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   /*****************************************************************/
 
   /**
-   * @dev Approves "usage" address to get allocations up to "amount" of xGRAIL from msg.sender
+   * @dev Approves "usage" address to get allocations up to "amount" of xART from msg.sender
    */
-  function approveUsage(IXGrailTokenUsage usage, uint256 amount) external nonReentrant {
+  function approveUsage(IXArtTokenUsage usage, uint256 amount) external nonReentrant {
     require(address(usage) != address(0), "approveUsage: approve to the zero address");
 
     usageApprovals[msg.sender][address(usage)] = amount;
@@ -256,14 +256,14 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   }
 
   /**
-   * @dev Convert caller's "amount" of GRAIL to xGRAIL
+   * @dev Convert caller's "amount" of ART to xART
    */
   function convert(uint256 amount) external nonReentrant {
     _convert(amount, msg.sender);
   }
 
   /**
-   * @dev Convert caller's "amount" of GRAIL to xGRAIL to "to" address
+   * @dev Convert caller's "amount" of ART to xART to "to" address
    */
   function convertTo(uint256 amount, address to) external override nonReentrant {
     require(address(msg.sender).isContract(), "convertTo: not allowed");
@@ -271,28 +271,28 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   }
 
   /**
-   * @dev Initiates redeem process (xGRAIL to GRAIL)
+   * @dev Initiates redeem process (xART to ART)
    *
    * Handles dividends' compensation allocation during the vesting process if needed
    */
-  function redeem(uint256 xGrailAmount, uint256 duration) external nonReentrant {
-    require(xGrailAmount > 0, "redeem: xGrailAmount cannot be null");
+  function redeem(uint256 xArtAmount, uint256 duration) external nonReentrant {
+    require(xArtAmount > 0, "redeem: xArtAmount cannot be null");
     require(duration >= minRedeemDuration, "redeem: duration too low");
 
-    _transfer(msg.sender, address(this), xGrailAmount);
-    XGrailBalance storage balance = xGrailBalances[msg.sender];
+    _transfer(msg.sender, address(this), xArtAmount);
+    XArtBalance storage balance = xArtBalances[msg.sender];
 
-    // get corresponding GRAIL amount
-    uint256 grailAmount = getGrailByVestingDuration(xGrailAmount, duration);
-    emit Redeem(msg.sender, xGrailAmount, grailAmount, duration);
+    // get corresponding ART amount
+    uint256 artAmount = getArtByVestingDuration(xArtAmount, duration);
+    emit Redeem(msg.sender, xArtAmount, artAmount, duration);
 
     // if redeeming is not immediate, go through vesting process
     if(duration > 0) {
       // add to SBT total
-      balance.redeemingAmount = balance.redeemingAmount.add(xGrailAmount);
+      balance.redeemingAmount = balance.redeemingAmount.add(xArtAmount);
 
       // handle dividends during the vesting process
-      uint256 dividendsAllocation = xGrailAmount.mul(redeemDividendsAdjustment).div(100);
+      uint256 dividendsAllocation = xArtAmount.mul(redeemDividendsAdjustment).div(100);
       // only if compensation is active
       if(dividendsAllocation > 0) {
         // allocate to dividends
@@ -300,10 +300,10 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
       }
 
       // add redeeming entry
-      userRedeems[msg.sender].push(RedeemInfo(grailAmount, xGrailAmount, _currentBlockTimestamp().add(duration), dividendsAddress, dividendsAllocation));
+      userRedeems[msg.sender].push(RedeemInfo(artAmount, xArtAmount, _currentBlockTimestamp().add(duration), dividendsAddress, dividendsAllocation));
     } else {
-      // immediately redeem for GRAIL
-      _finalizeRedeem(msg.sender, xGrailAmount, grailAmount);
+      // immediately redeem for ART
+      _finalizeRedeem(msg.sender, xArtAmount, artAmount);
     }
   }
 
@@ -313,18 +313,18 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
    * Can only be called by the redeem entry owner
    */
   function finalizeRedeem(uint256 redeemIndex) external nonReentrant validateRedeem(msg.sender, redeemIndex) {
-    XGrailBalance storage balance = xGrailBalances[msg.sender];
+    XArtBalance storage balance = xArtBalances[msg.sender];
     RedeemInfo storage _redeem = userRedeems[msg.sender][redeemIndex];
     require(_currentBlockTimestamp() >= _redeem.endTime, "finalizeRedeem: vesting duration has not ended yet");
 
     // remove from SBT total
-    balance.redeemingAmount = balance.redeemingAmount.sub(_redeem.xGrailAmount);
-    _finalizeRedeem(msg.sender, _redeem.xGrailAmount, _redeem.grailAmount);
+    balance.redeemingAmount = balance.redeemingAmount.sub(_redeem.xArtAmount);
+    _finalizeRedeem(msg.sender, _redeem.xArtAmount, _redeem.artAmount);
 
     // handle dividends compensation if any was active
     if(_redeem.dividendsAllocation > 0) {
       // deallocate from dividends
-      IXGrailTokenUsage(_redeem.dividendsAddress).deallocate(msg.sender, _redeem.dividendsAllocation, new bytes(0));
+      IXArtTokenUsage(_redeem.dividendsAddress).deallocate(msg.sender, _redeem.dividendsAllocation, new bytes(0));
     }
 
     // remove redeem entry
@@ -360,20 +360,20 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
    * Can only be called by its owner
    */
   function cancelRedeem(uint256 redeemIndex) external nonReentrant validateRedeem(msg.sender, redeemIndex) {
-    XGrailBalance storage balance = xGrailBalances[msg.sender];
+    XArtBalance storage balance = xArtBalances[msg.sender];
     RedeemInfo storage _redeem = userRedeems[msg.sender][redeemIndex];
 
-    // make redeeming xGRAIL available again
-    balance.redeemingAmount = balance.redeemingAmount.sub(_redeem.xGrailAmount);
-    _transfer(address(this), msg.sender, _redeem.xGrailAmount);
+    // make redeeming xART available again
+    balance.redeemingAmount = balance.redeemingAmount.sub(_redeem.xArtAmount);
+    _transfer(address(this), msg.sender, _redeem.xArtAmount);
 
     // handle dividends compensation if any was active
     if(_redeem.dividendsAllocation > 0) {
       // deallocate from dividends
-      IXGrailTokenUsage(_redeem.dividendsAddress).deallocate(msg.sender, _redeem.dividendsAllocation, new bytes(0));
+      IXArtTokenUsage(_redeem.dividendsAddress).deallocate(msg.sender, _redeem.dividendsAllocation, new bytes(0));
     }
 
-    emit CancelRedeem(msg.sender, _redeem.xGrailAmount);
+    emit CancelRedeem(msg.sender, _redeem.xArtAmount);
 
     // remove redeem entry
     _deleteRedeemEntry(redeemIndex);
@@ -381,42 +381,42 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
 
 
   /**
-   * @dev Allocates caller's "amount" of available xGRAIL to "usageAddress" contract
+   * @dev Allocates caller's "amount" of available xART to "usageAddress" contract
    *
    * args specific to usage contract must be passed into "usageData"
    */
   function allocate(address usageAddress, uint256 amount, bytes calldata usageData) external nonReentrant {
     _allocate(msg.sender, usageAddress, amount);
 
-    // allocates xGRAIL to usageContract
-    IXGrailTokenUsage(usageAddress).allocate(msg.sender, amount, usageData);
+    // allocates xART to usageContract
+    IXArtTokenUsage(usageAddress).allocate(msg.sender, amount, usageData);
   }
 
   /**
-   * @dev Allocates "amount" of available xGRAIL from "userAddress" to caller (ie usage contract)
+   * @dev Allocates "amount" of available xART from "userAddress" to caller (ie usage contract)
    *
-   * Caller must have an allocation approval for the required xGrail xGRAIL from "userAddress"
+   * Caller must have an allocation approval for the required xArt xART from "userAddress"
    */
   function allocateFromUsage(address userAddress, uint256 amount) external override nonReentrant {
     _allocate(userAddress, msg.sender, amount);
   }
 
   /**
-   * @dev Deallocates caller's "amount" of available xGRAIL from "usageAddress" contract
+   * @dev Deallocates caller's "amount" of available xART from "usageAddress" contract
    *
    * args specific to usage contract must be passed into "usageData"
    */
   function deallocate(address usageAddress, uint256 amount, bytes calldata usageData) external nonReentrant {
     _deallocate(msg.sender, usageAddress, amount);
 
-    // deallocate xGRAIL into usageContract
-    IXGrailTokenUsage(usageAddress).deallocate(msg.sender, amount, usageData);
+    // deallocate xART into usageContract
+    IXArtTokenUsage(usageAddress).deallocate(msg.sender, amount, usageData);
   }
 
   /**
-   * @dev Deallocates "amount" of allocated xGRAIL belonging to "userAddress" from caller (ie usage contract)
+   * @dev Deallocates "amount" of allocated xART belonging to "userAddress" from caller (ie usage contract)
    *
-   * Caller can only deallocate xGRAIL from itself
+   * Caller can only deallocate xART from itself
    */
   function deallocateFromUsage(address userAddress, uint256 amount) external override nonReentrant {
     _deallocate(userAddress, msg.sender, amount);
@@ -427,57 +427,57 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   /********************************************************/
 
   /**
-   * @dev Convert caller's "amount" of GRAIL into xGRAIL to "to"
+   * @dev Convert caller's "amount" of ART into xART to "to"
    */
   function _convert(uint256 amount, address to) internal {
     require(amount != 0, "convert: amount cannot be null");
 
-    // mint new xGRAIL
+    // mint new xART
     _mint(to, amount);
 
     emit Convert(msg.sender, to, amount);
-    grailToken.safeTransferFrom(msg.sender, address(this), amount);
+    artToken.safeTransferFrom(msg.sender, address(this), amount);
   }
 
   /**
-   * @dev Finalizes the redeeming process for "userAddress" by transferring him "grailAmount" and removing "xGrailAmount" from supply
+   * @dev Finalizes the redeeming process for "userAddress" by transferring him "artAmount" and removing "xArtAmount" from supply
    *
    * Any vesting check should be ran before calling this
-   * GRAIL excess is automatically burnt
+   * ART excess is automatically burnt
    */
-  function _finalizeRedeem(address userAddress, uint256 xGrailAmount, uint256 grailAmount) internal {
-    uint256 grailExcess = xGrailAmount.sub(grailAmount);
+  function _finalizeRedeem(address userAddress, uint256 xArtAmount, uint256 artAmount) internal {
+    uint256 artExcess = xArtAmount.sub(artAmount);
 
-    // sends due GRAIL tokens
-    grailToken.safeTransfer(userAddress, grailAmount);
+    // sends due ART tokens
+    artToken.safeTransfer(userAddress, artAmount);
 
-    // burns GRAIL excess if any
-    grailToken.burn(grailExcess);
-    _burn(address(this), xGrailAmount);
+    // burns ART excess if any
+    artToken.burn(artExcess);
+    _burn(address(this), xArtAmount);
 
-    emit FinalizeRedeem(userAddress, xGrailAmount, grailAmount);
+    emit FinalizeRedeem(userAddress, xArtAmount, artAmount);
   }
 
   /**
-   * @dev Allocates "userAddress" user's "amount" of available xGRAIL to "usageAddress" contract
+   * @dev Allocates "userAddress" user's "amount" of available xART to "usageAddress" contract
    *
    */
   function _allocate(address userAddress, address usageAddress, uint256 amount) internal {
     require(amount > 0, "allocate: amount cannot be null");
 
-    XGrailBalance storage balance = xGrailBalances[userAddress];
+    XArtBalance storage balance = xArtBalances[userAddress];
 
     // approval checks if allocation request amount has been approved by userAddress to be allocated to this usageAddress
-    uint256 approvedXGrail = usageApprovals[userAddress][usageAddress];
-    require(approvedXGrail >= amount, "allocate: non authorized amount");
+    uint256 approvedXArt = usageApprovals[userAddress][usageAddress];
+    require(approvedXArt >= amount, "allocate: non authorized amount");
 
     // remove allocated amount from usage's approved amount
-    usageApprovals[userAddress][usageAddress] = approvedXGrail.sub(amount);
+    usageApprovals[userAddress][usageAddress] = approvedXArt.sub(amount);
 
     // update usage's allocatedAmount for userAddress
     usageAllocations[userAddress][usageAddress] = usageAllocations[userAddress][usageAddress].add(amount);
 
-    // adjust user's xGRAIL balances
+    // adjust user's xART balances
     balance.allocatedAmount = balance.allocatedAmount.add(amount);
     _transfer(userAddress, address(this), amount);
 
@@ -485,14 +485,14 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
   }
 
   /**
-   * @dev Deallocates "amount" of available xGRAIL to "usageAddress" contract
+   * @dev Deallocates "amount" of available xART to "usageAddress" contract
    *
    * args specific to usage contract must be passed into "usageData"
    */
   function _deallocate(address userAddress, address usageAddress, uint256 amount) internal {
     require(amount > 0, "deallocate: amount cannot be null");
 
-    // check if there is enough allocated xGRAIL to this usage to deallocate
+    // check if there is enough allocated xART to this usage to deallocate
     uint256 allocatedAmount = usageAllocations[userAddress][usageAddress];
     require(allocatedAmount >= amount, "deallocate: non authorized amount");
 
@@ -501,12 +501,12 @@ contract XGrailToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token",
 
     uint256 deallocationFeeAmount = amount.mul(usagesDeallocationFee[usageAddress]).div(10000);
 
-    // adjust user's xGRAIL balances
-    XGrailBalance storage balance = xGrailBalances[userAddress];
+    // adjust user's xART balances
+    XArtBalance storage balance = xArtBalances[userAddress];
     balance.allocatedAmount = balance.allocatedAmount.sub(amount);
     _transfer(address(this), userAddress, amount.sub(deallocationFeeAmount));
-    // burn corresponding GRAIL and XGRAIL
-    grailToken.burn(deallocationFeeAmount);
+    // burn corresponding ART and XART
+    artToken.burn(deallocationFeeAmount);
     _burn(address(this), deallocationFeeAmount);
 
     emit Deallocate(userAddress, usageAddress, amount, deallocationFeeAmount);

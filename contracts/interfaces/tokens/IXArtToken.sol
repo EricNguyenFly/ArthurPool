@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IXGrailToken is IERC20 {
+interface IXArtToken is IERC20 {
   function usageAllocations(address userAddress, address usageAddress) external view returns (uint256 allocation);
 
   function allocateFromUsage(address userAddress, uint256 amount) external;

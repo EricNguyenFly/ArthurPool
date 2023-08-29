@@ -3,7 +3,7 @@ pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IGrailTokenV2 is IERC20{
+interface IArtTokenV2 is IERC20{
   function lastEmissionTime() external view returns (uint256);
 
   function claimMasterRewards(uint256 amount) external returns (uint256 effectiveAmount);

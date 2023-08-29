@@ -9,16 +9,16 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IArthurMaster.sol";
 import "./interfaces/INFTPool.sol";
 import "./interfaces/IYieldBooster.sol";
-import "./interfaces/tokens/IGrailTokenV2.sol";
+import "./interfaces/tokens/IArtTokenV2.sol";
 
 
 /*
  * This contract centralizes Arthur's yield incentives distribution.
  * Pools that should receive those incentives are defined here, along with their allocation.
- * All rewards are claimed from the GRAILToken contract.
+ * All rewards are claimed from the ARTToken contract.
  */
 contract ArthurMaster is Ownable, IArthurMaster {
-  using SafeERC20 for IGrailTokenV2;
+  using SafeERC20 for IArtTokenV2;
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -29,7 +29,7 @@ contract ArthurMaster is Ownable, IArthurMaster {
     uint256 reserve; // Pending rewards to distribute to the NFT pool
   }
 
-  IGrailTokenV2 private immutable _grailToken; // Address of the GRAIL token contract
+  IArtTokenV2 private immutable _artToken; // Address of the ART token contract
   IYieldBooster private _yieldBooster; // Contract address handling yield boosts
 
   mapping(address => PoolInfo) private _poolInfo; // Pools' information
@@ -42,13 +42,13 @@ contract ArthurMaster is Ownable, IArthurMaster {
   bool public override emergencyUnlock; // Used by pools to release all their locks at once in case of emergency
 
   constructor(
-    IGrailTokenV2 grailToken_,
+    IArtTokenV2 artToken_,
     uint256 startTime_
   ) {
-    require(address(grailToken_) != address(0), "ArthurMaster: grailToken cannot be set to zero address");
-    require(_currentBlockTimestamp() < startTime_ && startTime_ >= grailToken_.lastEmissionTime(), "ArthurMaster: invalid startTime");
-    _grailToken = grailToken_;
-    startTime = startTime_; // Must be set with the same time as GrailToken emission start
+    require(address(artToken_) != address(0), "ArthurMaster: artToken cannot be set to zero address");
+    require(_currentBlockTimestamp() < startTime_ && startTime_ >= artToken_.lastEmissionTime(), "ArthurMaster: invalid startTime");
+    _artToken = artToken_;
+    startTime = startTime_; // Must be set with the same time as ArtToken emission start
   }
 
 
@@ -82,17 +82,17 @@ contract ArthurMaster is Ownable, IArthurMaster {
   /**************************************************/
 
   /*
-   * @dev Returns GrailToken address
+   * @dev Returns ArtToken address
    */
-  function grailToken() external view override returns (address) {
-    return address(_grailToken);
+  function artToken() external view override returns (address) {
+    return address(_artToken);
   }
 
   /*
-   * @dev Returns GrailToken's emission rate (allocated to this contract)
+   * @dev Returns ArtToken's emission rate (allocated to this contract)
    */
   function emissionRate() public view returns (uint256) {
-    return _grailToken.masterEmissionRate();
+    return _artToken.masterEmissionRate();
   }
 
   /**
@@ -305,13 +305,13 @@ contract ArthurMaster is Ownable, IArthurMaster {
    * @dev Safe token transfer function, in case rounding error causes pool to not have enough tokens
    */
   function _safeRewardsTransfer(address to, uint256 amount) internal returns (uint256 effectiveAmount) {
-    uint256 grailBalance = _grailToken.balanceOf(address(this));
+    uint256 artBalance = _artToken.balanceOf(address(this));
 
-    if (amount > grailBalance) {
-      amount = grailBalance;
+    if (amount > artBalance) {
+      amount = artBalance;
     }
 
-    _grailToken.safeTransfer(to, amount);
+    _artToken.safeTransfer(to, amount);
     return amount;
   }
 
@@ -334,13 +334,13 @@ contract ArthurMaster is Ownable, IArthurMaster {
 
     // do not allocate rewards if pool is not active
     if (allocPoint > 0 && INFTPool(poolAddress).hasDeposits()) {
-      // calculate how much GRAIL rewards are expected to be received for this pool
+      // calculate how much ART rewards are expected to be received for this pool
       uint256 rewards = currentBlockTimestamp.sub(lastRewardTime) // nbSeconds
         .mul(emissionRate()).mul(allocPoint).div(totalAllocPoint);
 
       // claim expected rewards from the token
       // use returns effective minted amount instead of expected amount
-      (rewards) = _grailToken.claimMasterRewards(rewards);
+      (rewards) = _artToken.claimMasterRewards(rewards);
 
       // updates pool data
       pool.reserve = pool.reserve.add(rewards);

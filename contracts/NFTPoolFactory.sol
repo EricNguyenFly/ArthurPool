@@ -4,26 +4,26 @@ pragma solidity 0.8.16;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./interfaces/IArthurMaster.sol";
-import "./interfaces/tokens/IXGrailToken.sol";
+import "./interfaces/tokens/IXArtToken.sol";
 import "./NFTPool.sol";
 
 
 contract NFTPoolFactory {
   IArthurMaster public immutable master; // Address of the master
-  IERC20 public immutable grailToken;
-  IXGrailToken public immutable xGrailToken;
+  IERC20 public immutable artToken;
+  IXArtToken public immutable xArtToken;
 
   mapping(address => address) public getPool;
   address[] public pools;
 
   constructor(
     IArthurMaster master_,
-    IERC20 grailToken_,
-    IXGrailToken xGrailToken_
+    IERC20 artToken_,
+    IXArtToken xArtToken_
   ) {
     master = master_;
-    grailToken = grailToken_;
-    xGrailToken = xGrailToken_;
+    artToken = artToken_;
+    xArtToken = xArtToken_;
   }
 
   event PoolCreated(address indexed lpToken, address pool);
@@ -43,7 +43,7 @@ contract NFTPoolFactory {
     }
     require(pool != address(0), "failed");
 
-    NFTPool(pool).initialize(master, grailToken, xGrailToken, IERC20(lpToken));
+    NFTPool(pool).initialize(master, artToken, xArtToken, IERC20(lpToken));
     getPool[lpToken] = pool;
     pools.push(pool);
 

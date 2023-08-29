@@ -12,7 +12,7 @@ import "./interfaces/INFTHandler.sol";
 import "./interfaces/IArthurMaster.sol";
 import "./interfaces/INFTPool.sol";
 import "./interfaces/IYieldBooster.sol";
-import "./interfaces/tokens/IXGrailToken.sol";
+import "./interfaces/tokens/IXArtToken.sol";
 
 
 /*
@@ -36,10 +36,10 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
     uint256 lockDuration; // The lock duration in seconds
     uint256 lockMultiplier; // Active lock multiplier (times 1e2)
     uint256 rewardDebt; // Reward debt
-    uint256 boostPoints; // Allocated xGRAIL from yieldboost contract (optional)
-    uint256 totalMultiplier; // lockMultiplier + allocated xGRAIL boostPoints multiplier
-    uint256 pendingXGrailRewards; // Not harvested xGrail rewards
-    uint256 pendingGrailRewards; // Not harvested Grail rewards
+    uint256 boostPoints; // Allocated xART from yieldboost contract (optional)
+    uint256 totalMultiplier; // lockMultiplier + allocated xART boostPoints multiplier
+    uint256 pendingXArtRewards; // Not harvested xArt rewards
+    uint256 pendingArtRewards; // Not harvested Art rewards
   }
 
   Counters.Counter private _tokenIds;
@@ -51,8 +51,8 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
   bool public initialized;
 
   IERC20 private _lpToken; // Deposit token contract's address
-  IERC20 private _grailToken; // GrailToken contract's address
-  IXGrailToken private _xGrailToken; // XGrailToken contract's address
+  IERC20 private _artToken; // ArtToken contract's address
+  IXArtToken private _xArtToken; // XArtToken contract's address
   uint256 private _lpSupply; // Sum of deposit tokens on this pool
   uint256 private _lpSupplyWithMultiplier; // Sum of deposit token on this pool including the user's total multiplier (lockMultiplier + boostPoints)
   uint256 private _accRewardsPerShare; // Accumulated Rewards (staked token) per share, times 1e18. See below
@@ -64,10 +64,10 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
   uint256 private _maxGlobalMultiplier = 20000; // 200%
   uint256 private _maxLockDuration = 183 days; // 6 months, Capped lock duration to have the maximum bonus lockMultiplier
   uint256 private _maxLockMultiplier = 10000; // 100%, Max available lockMultiplier (100 = 1%)
-  uint256 private _maxBoostMultiplier = 10000; // 100%, Max boost that can be earned from xGrail yieldBooster
+  uint256 private _maxBoostMultiplier = 10000; // 100%, Max boost that can be earned from xArt yieldBooster
 
-  uint256 private constant _TOTAL_REWARDS_SHARES = 10000; // 100%, high limit for xGrailRewardsShare
-  uint256 public xGrailRewardsShare = 8000; // 80%, directly defines grailShare with the remaining value to 100%
+  uint256 private constant _TOTAL_REWARDS_SHARES = 10000; // 100%, high limit for xArtRewardsShare
+  uint256 public xArtRewardsShare = 8000; // 80%, directly defines artShare with the remaining value to 100%
 
   bool public emergencyUnlock; // Release all locks in case of emergency
 
@@ -78,16 +78,16 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
     factory = msg.sender;
   }
 
-  function initialize(IArthurMaster master_, IERC20 grailToken, IXGrailToken xGrailToken, IERC20 lpToken) external {
+  function initialize(IArthurMaster master_, IERC20 artToken, IXArtToken xArtToken, IERC20 lpToken) external {
     require(msg.sender == factory && !initialized, "FORBIDDEN");
     _lpToken = lpToken;
     master = master_;
-    _grailToken = grailToken;
-    _xGrailToken = xGrailToken;
+    _artToken = artToken;
+    _xArtToken = xArtToken;
     initialized = true;
 
-    // to convert GRAIL to xGRAIL
-   _grailToken.approve(address(_xGrailToken), type(uint256).max);
+    // to convert ART to xART
+   _artToken.approve(address(_xArtToken), type(uint256).max);
   }
 
 
@@ -109,7 +109,7 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
 
   event SetLockMultiplierSettings(uint256 maxLockDuration, uint256 maxLockMultiplier);
   event SetBoostMultiplierSettings(uint256 maxGlobalMultiplier, uint256 maxBoostMultiplier);
-  event SetXGrailRewardsShare(uint256 xGrailRewardsShare);
+  event SetXArtRewardsShare(uint256 xArtRewardsShare);
   event SetUnlockOperator(address operator, bool isAdded);
   event SetEmergencyUnlock(bool emergencyUnlock);
   event SetOperator(address operator);
@@ -235,12 +235,12 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
    * @dev Returns general "pool" info for this contract
    */
   function getPoolInfo() external view override returns (
-    address lpToken, address grailToken, address xGrailToken, uint256 lastRewardTime, uint256 accRewardsPerShare,
+    address lpToken, address artToken, address xArtToken, uint256 lastRewardTime, uint256 accRewardsPerShare,
     uint256 lpSupply, uint256 lpSupplyWithMultiplier, uint256 allocPoint
   ) {
     (, allocPoint, lastRewardTime,,) = master.getPoolInfo(address(this));
     return (
-    address(_lpToken), address(_grailToken), address(_xGrailToken), lastRewardTime, _accRewardsPerShare,
+    address(_lpToken), address(_artToken), address(_xArtToken), lastRewardTime, _accRewardsPerShare,
     _lpSupply, _lpSupplyWithMultiplier, allocPoint
     );
   }
@@ -312,7 +312,7 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
     }
 
     return position.amountWithMultiplier.mul(accRewardsPerShare).div(1e18).sub(position.rewardDebt)
-      .add(position.pendingXGrailRewards).add(position.pendingGrailRewards);
+      .add(position.pendingXArtRewards).add(position.pendingArtRewards);
   }
 
 
@@ -362,17 +362,17 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
   }
 
   /**
-   * @dev Set the share of xGRAIL for the distributed rewards
-   * The share of GRAIL will incidently be 100% - xGrailRewardsShare
+   * @dev Set the share of xART for the distributed rewards
+   * The share of ART will incidently be 100% - xArtRewardsShare
    *
    * Must only be called by the owner
    */
-  function setXGrailRewardsShare(uint256 xGrailRewardsShare_) external {
+  function setXArtRewardsShare(uint256 xArtRewardsShare_) external {
     _requireOnlyOwner();
-    require(xGrailRewardsShare_ <= _TOTAL_REWARDS_SHARES, "too high");
+    require(xArtRewardsShare_ <= _TOTAL_REWARDS_SHARES, "too high");
 
-    xGrailRewardsShare = xGrailRewardsShare_;
-    emit SetXGrailRewardsShare(xGrailRewardsShare_);
+    xArtRewardsShare = xArtRewardsShare_;
+    emit SetXArtRewardsShare(xArtRewardsShare_);
   }
 
   /**
@@ -474,8 +474,8 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
       amountWithMultiplier : amountWithMultiplier,
       boostPoints : 0,
       totalMultiplier : lockMultiplier,
-      pendingGrailRewards: 0,
-      pendingXGrailRewards: 0
+      pendingArtRewards: 0,
+      pendingXArtRewards: 0
     });
 
     // update total lp supply
@@ -681,8 +681,8 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
       amountWithMultiplier : amountWithMultiplier,
       boostPoints : 0,
       totalMultiplier : lockMultiplier,
-      pendingGrailRewards: 0,
-      pendingXGrailRewards: 0
+      pendingArtRewards: 0,
+      pendingXArtRewards: 0
     });
 
     _lpSupplyWithMultiplier = _lpSupplyWithMultiplier.add(amountWithMultiplier);
@@ -801,7 +801,7 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
    * @dev Destroys spNFT
    *
    * "boostPointsToDeallocate" is set to 0 to ignore boost points handling if called during an emergencyWithdraw
-   * Users should still be able to deallocate xGRAIL from the YieldBooster contract
+   * Users should still be able to deallocate xART from the YieldBooster contract
    */
   function _destroyPosition(uint256 tokenId, uint256 boostPoints) internal {
     // calls yieldBooster contract to deallocate the spNFT's owner boost points if any
@@ -894,28 +894,28 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
     }
 
     // transfer rewards
-    if (pending > 0 || position.pendingXGrailRewards > 0 || position.pendingGrailRewards > 0) {
-      uint256 xGrailRewards = pending.mul(xGrailRewardsShare).div(_TOTAL_REWARDS_SHARES);
-      uint256 grailAmount = pending.add(position.pendingGrailRewards).sub(xGrailRewards);
+    if (pending > 0 || position.pendingXArtRewards > 0 || position.pendingArtRewards > 0) {
+      uint256 xArtRewards = pending.mul(xArtRewardsShare).div(_TOTAL_REWARDS_SHARES);
+      uint256 artAmount = pending.add(position.pendingArtRewards).sub(xArtRewards);
 
-      xGrailRewards = xGrailRewards.add(position.pendingXGrailRewards);
+      xArtRewards = xArtRewards.add(position.pendingXArtRewards);
 
       // Stack rewards in a buffer if to is equal to address(0)
       if (address(0) == to) {
-        position.pendingXGrailRewards = xGrailRewards;
-        position.pendingGrailRewards = grailAmount;
+        position.pendingXArtRewards = xArtRewards;
+        position.pendingArtRewards = artAmount;
       }
       else {
-        // convert and send xGRAIL + GRAIL rewards
-        position.pendingXGrailRewards = 0;
-        position.pendingGrailRewards = 0;
+        // convert and send xART + ART rewards
+        position.pendingXArtRewards = 0;
+        position.pendingArtRewards = 0;
 
-        if(xGrailRewards > 0) xGrailRewards = _safeConvertTo(to, xGrailRewards);
-        // send share of GRAIL rewards
-        grailAmount= _safeRewardsTransfer(to, grailAmount);
+        if(xArtRewards > 0) xArtRewards = _safeConvertTo(to, xArtRewards);
+        // send share of ART rewards
+        artAmount= _safeRewardsTransfer(to, artAmount);
 
         // forbidden to harvest if contract has not explicitly confirmed it handle it
-        _checkOnNFTHarvest(to, tokenId, grailAmount, xGrailRewards);
+        _checkOnNFTHarvest(to, tokenId, artAmount, xArtRewards);
       }
     }
     emit HarvestPosition(tokenId, to, pending);
@@ -961,36 +961,36 @@ contract NFTPool is ReentrancyGuard, INFTPool, ERC721("Arthur staking position N
    * @dev Safe token transfer function, in case rounding error causes pool to not have enough tokens
    */
   function _safeRewardsTransfer(address to, uint256 amount) internal returns (uint256) {
-    uint256 balance = _grailToken.balanceOf(address(this));
+    uint256 balance = _artToken.balanceOf(address(this));
     // cap to available balance
     if (amount > balance) {
       amount = balance;
     }
-    _grailToken.safeTransfer(to, amount);
+    _artToken.safeTransfer(to, amount);
     return amount;
   }
 
   /**
-   * @dev Safe convert GRAIL to xGRAIL function, in case rounding error causes pool to not have enough tokens
+   * @dev Safe convert ART to xART function, in case rounding error causes pool to not have enough tokens
    */
   function _safeConvertTo(address to, uint256 amount) internal returns (uint256) {
-    uint256 balance = _grailToken.balanceOf(address(this));
+    uint256 balance = _artToken.balanceOf(address(this));
     // cap to available balance
     if (amount > balance) {
       amount = balance;
     }
-    if(amount > 0 ) _xGrailToken.convertTo(amount, to);
+    if(amount > 0 ) _xArtToken.convertTo(amount, to);
     return amount;
   }
 
   /**
    * @dev If NFT's owner is a contract, confirm whether it's able to handle rewards harvesting
    */
-  function _checkOnNFTHarvest(address to, uint256 tokenId, uint256 grailAmount, uint256 xGrailAmount) internal {
+  function _checkOnNFTHarvest(address to, uint256 tokenId, uint256 artAmount, uint256 xArtAmount) internal {
     address nftOwner = ERC721.ownerOf(tokenId);
     if (nftOwner.isContract()) {
       bytes memory returndata = nftOwner.functionCall(abi.encodeWithSelector(
-          INFTHandler(nftOwner).onNFTHarvest.selector, msg.sender, to, tokenId, grailAmount, xGrailAmount), "non implemented");
+          INFTHandler(nftOwner).onNFTHarvest.selector, msg.sender, to, tokenId, artAmount, xArtAmount), "non implemented");
       require(abi.decode(returndata, (bool)), "FORBIDDEN");
     }
   }

@@ -12,8 +12,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/INFTHandler.sol";
 import "./interfaces/INFTPool.sol";
 import "./interfaces/IMerlinPoolFactory.sol";
-import "./interfaces/tokens/IGrailTokenV2.sol";
-import "./interfaces/tokens/IXGrailToken.sol";
+import "./interfaces/tokens/IArtTokenV2.sol";
+import "./interfaces/tokens/IXArtToken.sol";
 import "./interfaces/IMerlinCustomReq.sol";
 
 
@@ -21,8 +21,8 @@ contract MerlinPool is ReentrancyGuard, Ownable, INFTHandler {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
-    using SafeERC20 for IXGrailToken;
-    using SafeERC20 for IGrailTokenV2;
+    using SafeERC20 for IXArtToken;
+    using SafeERC20 for IArtTokenV2;
     using SafeMath for uint256;
 
     struct UserInfo {
@@ -60,8 +60,8 @@ contract MerlinPool is ReentrancyGuard, Ownable, INFTHandler {
     bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
 
     IMerlinPoolFactory public factory; // MerlinPoolFactory address
-    IGrailTokenV2 public grailToken; // GRAILToken contract
-    IXGrailToken public xGrailToken; // xGRAILToken contract
+    IArtTokenV2 public artToken; // ARTToken contract
+    IXArtToken public xArtToken; // xARTToken contract
     INFTPool public nftPool; // NFTPool contract
     IMerlinCustomReq public customReqContract; // (optional) external contracts allow to handle custom requirements
 
@@ -87,10 +87,10 @@ contract MerlinPool is ReentrancyGuard, Ownable, INFTHandler {
     Settings public settings; // global and requirements settings
 
     constructor(
-        IGrailTokenV2 grailToken_, IXGrailToken xGrailToken_, address owner_, INFTPool nftPool_,
+        IArtTokenV2 artToken_, IXArtToken xArtToken_, address owner_, INFTPool nftPool_,
         IERC20 rewardsToken1_, IERC20 rewardsToken2_, Settings memory settings_
     ) {
-        require(address(grailToken_) != address(0) && address(xGrailToken_) != address(0) && owner_ != address(0)
+        require(address(artToken_) != address(0) && address(xArtToken_) != address(0) && owner_ != address(0)
             && address(nftPool_) != address(0) && address(rewardsToken1_) != address(0), "zero address");
         require(_currentBlockTimestamp() < settings_.startTime, "invalid startTime");
         require(settings_.startTime < settings_.endTime, "invalid endTime");
@@ -100,8 +100,8 @@ contract MerlinPool is ReentrancyGuard, Ownable, INFTHandler {
 
         factory = IMerlinPoolFactory(msg.sender);
 
-        grailToken = grailToken_;
-        xGrailToken = xGrailToken_;
+        artToken = artToken_;
+        xArtToken = xArtToken_;
         nftPool = nftPool_;
         creationTime = _currentBlockTimestamp();
 
@@ -337,19 +337,19 @@ contract MerlinPool is ReentrancyGuard, Ownable, INFTHandler {
      * @dev Allow stacked positions to be harvested
      *
      * "to" can be set to token's previous owner
-     * "to" can be set to this address only if this contract is allowed to transfer xGRAIL
+     * "to" can be set to this address only if this contract is allowed to transfer xART
      */
-    function onNFTHarvest(address operator, address to, uint256 tokenId, uint256 grailAmount, uint256 xGrailAmount) external override isValidNFTPool(msg.sender) returns (bool) {
+    function onNFTHarvest(address operator, address to, uint256 tokenId, uint256 artAmount, uint256 xArtAmount) external override isValidNFTPool(msg.sender) returns (bool) {
         address owner = tokenIdOwner[tokenId];
         require(operator == owner, "not allowed");
 
-        // if not whitelisted, the MerlinPool can't transfer any xGRAIL rewards
-        require(to != address(this) || xGrailToken.isTransferWhitelisted(address(this)), "cant handle rewards");
+        // if not whitelisted, the MerlinPool can't transfer any xART rewards
+        require(to != address(this) || xArtToken.isTransferWhitelisted(address(this)), "cant handle rewards");
 
         // redirect rewards to position's previous owner
         if (to == address(this)) {
-            grailToken.safeTransfer(owner, grailAmount);
-            xGrailToken.safeTransfer(owner, xGrailAmount);
+            artToken.safeTransfer(owner, artAmount);
+            xArtToken.safeTransfer(owner, xArtAmount);
         }
 
         return true;

@@ -8,15 +8,15 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./MerlinPool.sol";
 import "./interfaces/IMerlinPoolFactory.sol";
-import "./interfaces/tokens/IGrailTokenV2.sol";
-import "./interfaces/tokens/IXGrailToken.sol";
+import "./interfaces/tokens/IArtTokenV2.sol";
+import "./interfaces/tokens/IXArtToken.sol";
 
 
 contract MerlinPoolFactory is Ownable, IMerlinPoolFactory {
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  IGrailTokenV2 public grailToken; // GRAILToken contract's address
-  IXGrailToken public xGrailToken; // xGRAILToken contract's address
+  IArtTokenV2 public artToken; // ARTToken contract's address
+  IXArtToken public xArtToken; // xARTToken contract's address
 
   EnumerableSet.AddressSet internal _merlinPools; // all merlin pools
   EnumerableSet.AddressSet private _publishedMerlinPools; // all published merlin pools
@@ -31,11 +31,11 @@ contract MerlinPoolFactory is Ownable, IMerlinPoolFactory {
   address public override emergencyRecoveryAddress; // to recover rewards from emergency closed merlin pools
 
 
-  constructor(IGrailTokenV2 grailToken_, IXGrailToken xGrailToken_, address emergencyRecoveryAddress_, address feeAddress_){
+  constructor(IArtTokenV2 artToken_, IXArtToken xArtToken_, address emergencyRecoveryAddress_, address feeAddress_){
     require(emergencyRecoveryAddress_ != address(0) && feeAddress_ != address(0), "invalid");
 
-    grailToken = grailToken_;
-    xGrailToken = xGrailToken_;
+    artToken = artToken_;
+    xArtToken = xArtToken_;
     emergencyRecoveryAddress = emergencyRecoveryAddress_;
     feeAddress = feeAddress_;
   }
@@ -170,7 +170,7 @@ contract MerlinPoolFactory is Ownable, IMerlinPoolFactory {
     // Initialize new merlin pool
     merlinPool = address(
       new MerlinPool(
-        grailToken, xGrailToken, msg.sender, INFTPool(nftPoolAddress),
+        artToken, xArtToken, msg.sender, INFTPool(nftPoolAddress),
           rewardsToken1, rewardsToken2, settings
       )
     );
