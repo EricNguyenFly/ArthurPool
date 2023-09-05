@@ -14,7 +14,11 @@ import {
 	ArtTokenV2__factory,
 	ArtTokenV2,
 	XArtToken__factory,
-	XArtToken
+	XArtToken,
+	DividendsV2__factory,
+	DividendsV2,
+	Launchpad__factory,
+	Launchpad
 } from "../typechain-types";
 import { parseEther } from "ethers/lib/utils";
 
@@ -38,6 +42,8 @@ async function main() {
 	const PositionHelper: PositionHelper__factory = await hre.ethers.getContractFactory("PositionHelper");
 	const ArtTokenV2: ArtTokenV2__factory = await hre.ethers.getContractFactory("ArtTokenV2");
 	const XArtToken: XArtToken__factory = await hre.ethers.getContractFactory("XArtToken");
+	const DividendsV2: DividendsV2__factory = await hre.ethers.getContractFactory("DividendsV2");
+	const Launchpad: Launchpad__factory = await hre.ethers.getContractFactory("Launchpad");
 
 	//* Deploy contracts */
 	console.log("================================================================================");
@@ -58,6 +64,14 @@ async function main() {
 	const xArtToken = await XArtToken.deploy(artToken.address) as XArtToken;
 	await xArtToken.deployed();
 	console.log("XArtToken                          deployed to:>>", xArtToken.address);
+
+	const dividendsV2 = await DividendsV2.deploy(artToken.address, startTime) as DividendsV2;
+	await dividendsV2.deployed();
+	console.log("DividendsV2                          deployed to:>>", dividendsV2.address);
+
+	const launchpad = await Launchpad.deploy(artToken.address) as Launchpad;
+	await launchpad.deployed();
+	console.log("Launchpad                          deployed to:>>", launchpad.address);
 
 	const arthurMaster = await ArthurMaster.deploy(artToken.address, startTime) as ArthurMaster;
 	await arthurMaster.deployed();
@@ -90,6 +104,8 @@ async function main() {
 	const contracts = {
 		artToken: artToken.address,
 		xArtToken: xArtToken.address,
+		dividendsV2: dividendsV2.address,
+		launchpad: launchpad.address,
 		arthurMaster: arthurMaster.address,
 		merlinPoolFactory: merlinPoolFactory.address,
 		nftPoolFactory: nftPoolFactory.address,
@@ -102,6 +118,8 @@ async function main() {
 	const contractVerify = {
 		artToken: artToken.address,
 		xArtToken: xArtToken.address,
+		dividendsV2: dividendsV2.address,
+		launchpad: launchpad.address,
 		arthurMaster: arthurMaster.address,
 		merlinPoolFactory: merlinPoolFactory.address,
 		nftPoolFactory: nftPoolFactory.address,
@@ -121,6 +139,20 @@ async function main() {
 	await hre
 		.run("verify:verify", {
 			address: xArtToken.address,
+			constructorArguments: [artToken.address]
+		})
+		.catch(console.log);
+
+	await hre
+		.run("verify:verify", {
+			address: dividendsV2.address,
+			constructorArguments: [artToken.address, startTime]
+		})
+		.catch(console.log);
+
+	await hre
+		.run("verify:verify", {
+			address: launchpad.address,
 			constructorArguments: [artToken.address]
 		})
 		.catch(console.log);
