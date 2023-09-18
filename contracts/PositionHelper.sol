@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./interfaces/IArthurRouter.sol";
 import "./interfaces/INFTPool.sol";
+import "hardhat/console.sol";
 
 contract PositionHelper is ReentrancyGuard {
   using Address for address;
@@ -46,12 +47,13 @@ contract PositionHelper is ReentrancyGuard {
       require(lp == nftUnderlyingAsset, "invalid nftPool");
     }
 
-    bytes memory data = address(router).functionDelegateCall(
+    (bool success, bytes memory data) = address(router).delegatecall(
       abi.encodeWithSelector(
         router.addLiquidity.selector,
         tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, address(this), deadline, timeLock
       )
     );
+    require(success, "delegate call failed");
     (,, uint256 lpAmount) = abi.decode(data, (uint256, uint256, uint256));
 
     expectedTokenId = nftPool.lastTokenId().add(1);
