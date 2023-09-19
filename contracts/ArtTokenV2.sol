@@ -16,7 +16,7 @@ import "./interfaces/tokens/IArtTokenV2.sol";
 contract ArtTokenV2 is Ownable, ERC20("Arthur token", "ART"), IArtTokenV2 {
   using SafeMath for uint256;
 
-  uint256 public constant MAX_EMISSION_RATE = 0.01 ether;
+  uint256 public constant MAX_EMISSION_RATE = 0.1 ether;
   uint256 public constant MAX_SUPPLY_LIMIT = 10_000_000 ether;
   uint256 public elasticMaxSupply; // Once deployed, controlled through governance only
   uint256 public emissionRate; // Token emission per second

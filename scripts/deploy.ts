@@ -21,6 +21,8 @@ import {
 	Launchpad
 } from "../typechain-types";
 import { parseEther } from "ethers/lib/utils";
+import { getTimestamp } from "../test/utils";
+const ONE_DAY = 24 * 60 * 60;
 
 async function main() {
 	//* Loading accounts */
@@ -50,10 +52,16 @@ async function main() {
 	console.log("DEPLOYING CONTRACTS");
 	console.log("================================================================================");
 
-	const startTime = "1693202400";
+	const startTime = (await getTimestamp()) + ONE_DAY;
+	console.log("startTime", startTime);
+
+	// linea
+	const arthurRouter = "0xc65a8b166c2b6C386ee0B6CD7dFd3e502793B2c4";
+	const weth = "0x451a32Fe376a699Ea25b6Cafc00E446ECC8452A9";
+
 	// mumbai
-	const arthurRouter = "0x764EcF27DF3df771D1c79f48A05aB18d2b6BBa10";
-	const weth = "0xc82f14458f68f076A4f2E756dB24B56A3C670bB4";
+	// const arthurRouter = "0x764EcF27DF3df771D1c79f48A05aB18d2b6BBa10";
+	// const weth = "0xc82f14458f68f076A4f2E756dB24B56A3C670bB4";
 	// const artToken = "";
 	// const xArtToken = "";
 
@@ -94,7 +102,7 @@ async function main() {
 	console.log("PositionHelper                          deployed to:>>", positionHelper.address);
 
 	await artToken.updateAllocations("68", "4");
-	await artToken.initializeEmissionStart("1693198800");
+	await artToken.initializeEmissionStart(startTime);
 	await artToken.initializeMasterAddress(arthurMaster.address);
 
 	console.log("================================================================================");
@@ -102,6 +110,7 @@ async function main() {
 	console.log("================================================================================");
 
 	const contracts = {
+		startTime: startTime,
 		artToken: artToken.address,
 		xArtToken: xArtToken.address,
 		dividendsV2: dividendsV2.address,
@@ -116,6 +125,7 @@ async function main() {
 	await fs.writeFileSync("contracts.json", JSON.stringify(contracts));
 
 	const contractVerify = {
+		startTime: startTime,
 		artToken: artToken.address,
 		xArtToken: xArtToken.address,
 		dividendsV2: dividendsV2.address,
@@ -132,7 +142,7 @@ async function main() {
 	await hre
 		.run("verify:verify", {
 			address: artToken.address,
-			constructorArguments: [parseEther("100000"), parseEther("72500"), "178240740740741", accounts[0].address]
+			constructorArguments: [parseEther("10000000"), parseEther("7250000"), "178240740740741", accounts[0].address]
 		})
 		.catch(console.log);
 

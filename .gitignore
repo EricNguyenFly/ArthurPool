@@ -11,6 +11,7 @@
 /contracts.json
 /contracts-verify.json
 /coverage.json
+/outputs
 # Logs
 logs
 *.log
