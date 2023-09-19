@@ -56,7 +56,7 @@ async function main() {
 	console.log("startTime", startTime);
 
 	// linea
-	const arthurRouter = "0xc65a8b166c2b6C386ee0B6CD7dFd3e502793B2c4";
+	const arthurRouter = "0xeF53c5eEfD1d0e0bb197519dD2428f016083F39C";
 	const weth = "0x451a32Fe376a699Ea25b6Cafc00E446ECC8452A9";
 
 	// mumbai
