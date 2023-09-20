@@ -104,6 +104,7 @@ async function main() {
 	await artToken.updateAllocations("68", "4");
 	await artToken.initializeEmissionStart(startTime);
 	await artToken.initializeMasterAddress(arthurMaster.address);
+	await arthurMaster.setYieldBooster(yieldBooster.address);
 
 	console.log("================================================================================");
 	console.log("DONE");
