@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/INFTHandler.sol";
 import "./interfaces/INFTPool.sol";
 import "./interfaces/IMerlinPoolFactory.sol";
-import "./interfaces/tokens/IArtTokenV2.sol";
+import "./interfaces/tokens/IArtToken.sol";
 import "./interfaces/tokens/IXArtToken.sol";
 import "./interfaces/IMerlinCustomReq.sol";
 
@@ -22,7 +22,7 @@ contract MerlinPool is ReentrancyGuard, Ownable, INFTHandler {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using SafeERC20 for IXArtToken;
-    using SafeERC20 for IArtTokenV2;
+    using SafeERC20 for IArtToken;
     using SafeMath for uint256;
 
     struct UserInfo {
@@ -60,7 +60,7 @@ contract MerlinPool is ReentrancyGuard, Ownable, INFTHandler {
     bytes4 private constant _ERC721_RECEIVED = 0x150b7a02;
 
     IMerlinPoolFactory public factory; // MerlinPoolFactory address
-    IArtTokenV2 public artToken; // ARTToken contract
+    IArtToken public artToken; // ARTToken contract
     IXArtToken public xArtToken; // xARTToken contract
     INFTPool public nftPool; // NFTPool contract
     IMerlinCustomReq public customReqContract; // (optional) external contracts allow to handle custom requirements
@@ -87,7 +87,7 @@ contract MerlinPool is ReentrancyGuard, Ownable, INFTHandler {
     Settings public settings; // global and requirements settings
 
     constructor(
-        IArtTokenV2 artToken_, IXArtToken xArtToken_, address owner_, INFTPool nftPool_,
+        IArtToken artToken_, IXArtToken xArtToken_, address owner_, INFTPool nftPool_,
         IERC20 rewardsToken1_, IERC20 rewardsToken2_, Settings memory settings_
     ) {
         require(address(artToken_) != address(0) && address(xArtToken_) != address(0) && owner_ != address(0)

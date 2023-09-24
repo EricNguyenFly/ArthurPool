@@ -16,8 +16,8 @@ import {
     NFTPoolFactory,
     YieldBooster__factory,
     YieldBooster,
-    ArtTokenV2__factory,
-    ArtTokenV2,
+    ArtToken__factory,
+    ArtToken,
     XArtToken__factory,
     XArtToken,
     PositionHelper__factory,
@@ -54,7 +54,7 @@ describe("MerlinPoolFactory", () => {
         [owner, admin1, admin2, user1, ...accounts] = await ethers.getSigners();
 
         const ArthurMaster: ArthurMaster__factory = await ethers.getContractFactory("ArthurMaster");
-        const ArtTokenV2: ArtTokenV2__factory = await ethers.getContractFactory("ArtTokenV2");
+        const ArtToken: ArtToken__factory = await ethers.getContractFactory("ArtToken");
         const XArtToken: XArtToken__factory = await ethers.getContractFactory("XArtToken");
         const NFTPoolFactory: NFTPoolFactory__factory = await ethers.getContractFactory("NFTPoolFactory");
 
@@ -89,7 +89,7 @@ describe("MerlinPoolFactory", () => {
 
         //=======================================================
         const currentTimestamp = await getTimestamp();
-        const artToken = await ArtTokenV2.deploy(parseEther("10000000"), parseEther("7250000"), "178240740740741", accounts[0].address) as ArtTokenV2;
+        const artToken = await ArtToken.deploy(parseEther("10000000"), parseEther("7250000"), "178240740740741", accounts[0].address) as ArtToken;
         await artToken.deployed();
 
         const xArtToken = await XArtToken.deploy(artToken.address) as XArtToken;

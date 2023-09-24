@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IArthurMaster.sol";
 import "./interfaces/INFTPool.sol";
 import "./interfaces/IYieldBooster.sol";
-import "./interfaces/tokens/IArtTokenV2.sol";
+import "./interfaces/tokens/IArtToken.sol";
 
 
 /*
@@ -18,7 +18,7 @@ import "./interfaces/tokens/IArtTokenV2.sol";
  * All rewards are claimed from the ARTToken contract.
  */
 contract ArthurMaster is Ownable, IArthurMaster {
-  using SafeERC20 for IArtTokenV2;
+  using SafeERC20 for IArtToken;
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -29,7 +29,7 @@ contract ArthurMaster is Ownable, IArthurMaster {
     uint256 reserve; // Pending rewards to distribute to the NFT pool
   }
 
-  IArtTokenV2 private immutable _artToken; // Address of the ART token contract
+  IArtToken private immutable _artToken; // Address of the ART token contract
   IYieldBooster private _yieldBooster; // Contract address handling yield boosts
 
   mapping(address => PoolInfo) private _poolInfo; // Pools' information
@@ -42,7 +42,7 @@ contract ArthurMaster is Ownable, IArthurMaster {
   bool public override emergencyUnlock; // Used by pools to release all their locks at once in case of emergency
 
   constructor(
-    IArtTokenV2 artToken_,
+    IArtToken artToken_,
     uint256 startTime_
   ) {
     require(address(artToken_) != address(0), "ArthurMaster: artToken cannot be set to zero address");

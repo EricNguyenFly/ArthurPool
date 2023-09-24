@@ -11,8 +11,8 @@ import {
 	YieldBooster,
 	PositionHelper__factory,
 	PositionHelper,
-	ArtTokenV2__factory,
-	ArtTokenV2,
+	ArtToken__factory,
+	ArtToken,
 	XArtToken__factory,
 	XArtToken,
 	DividendsV2__factory,
@@ -42,7 +42,7 @@ async function main() {
 	const NFTPoolFactory: NFTPoolFactory__factory = await hre.ethers.getContractFactory("NFTPoolFactory");
 	const YieldBooster: YieldBooster__factory = await hre.ethers.getContractFactory("YieldBooster");
 	const PositionHelper: PositionHelper__factory = await hre.ethers.getContractFactory("PositionHelper");
-	const ArtTokenV2: ArtTokenV2__factory = await hre.ethers.getContractFactory("ArtTokenV2");
+	const ArtToken: ArtToken__factory = await hre.ethers.getContractFactory("ArtToken");
 	const XArtToken: XArtToken__factory = await hre.ethers.getContractFactory("XArtToken");
 	const DividendsV2: DividendsV2__factory = await hre.ethers.getContractFactory("DividendsV2");
 	const Launchpad: Launchpad__factory = await hre.ethers.getContractFactory("Launchpad");
@@ -65,9 +65,9 @@ async function main() {
 	// const artToken = "";
 	// const xArtToken = "";
 
-	const artToken = await ArtTokenV2.deploy(parseEther("10000000"), parseEther("7250000"), "178240740740741", accounts[0].address) as ArtTokenV2;
+	const artToken = await ArtToken.deploy(parseEther("10000000"), parseEther("7250000"), "178240740740741", accounts[0].address) as ArtToken;
 	await artToken.deployed();
-	console.log("ArtTokenV2                          deployed to:>>", artToken.address);
+	console.log("ArtToken                          deployed to:>>", artToken.address);
 
 	const xArtToken = await XArtToken.deploy(artToken.address) as XArtToken;
 	await xArtToken.deployed();
@@ -101,7 +101,7 @@ async function main() {
 	await positionHelper.deployed();
 	console.log("PositionHelper                          deployed to:>>", positionHelper.address);
 
-	await artToken.updateAllocations("68", "4");
+	await artToken.updateAllocations("70");
 	await artToken.initializeEmissionStart(startTime);
 	await artToken.initializeMasterAddress(arthurMaster.address);
 	await arthurMaster.setYieldBooster(yieldBooster.address);

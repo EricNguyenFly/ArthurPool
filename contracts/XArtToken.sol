@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import "./interfaces/tokens/IArtTokenV2.sol";
+import "./interfaces/tokens/IArtToken.sol";
 import "./interfaces/tokens/IXArtToken.sol";
 import "./interfaces/IXArtTokenUsage.sol";
 
@@ -23,7 +23,7 @@ contract XArtToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token", "
   using Address for address;
   using SafeMath for uint256;
   using EnumerableSet for EnumerableSet.AddressSet;
-  using SafeERC20 for IArtTokenV2;
+  using SafeERC20 for IArtToken;
 
   struct XArtBalance {
     uint256 allocatedAmount; // Amount of xART allocated to a Usage
@@ -38,7 +38,7 @@ contract XArtToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token", "
     uint256 dividendsAllocation; // Share of redeeming xART to allocate to the Dividends Usage contract
   }
 
-  IArtTokenV2 public immutable artToken; // ART token to convert to/from
+  IArtToken public immutable artToken; // ART token to convert to/from
   IXArtTokenUsage public dividendsAddress; // Arthur dividends contract
 
   EnumerableSet.AddressSet private _transferWhitelist; // addresses allowed to send/receive xART
@@ -63,7 +63,7 @@ contract XArtToken is Ownable, ReentrancyGuard, ERC20("Arthur escrowed token", "
   mapping(address => RedeemInfo[]) public userRedeems; // User's redeeming instances
 
 
-  constructor(IArtTokenV2 artToken_) {
+  constructor(IArtToken artToken_) {
     artToken = artToken_;
     _transferWhitelist.add(address(this));
   }

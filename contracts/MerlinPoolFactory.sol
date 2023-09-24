@@ -8,14 +8,14 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./MerlinPool.sol";
 import "./interfaces/IMerlinPoolFactory.sol";
-import "./interfaces/tokens/IArtTokenV2.sol";
+import "./interfaces/tokens/IArtToken.sol";
 import "./interfaces/tokens/IXArtToken.sol";
 
 
 contract MerlinPoolFactory is Ownable, IMerlinPoolFactory {
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  IArtTokenV2 public artToken; // ARTToken contract's address
+  IArtToken public artToken; // ARTToken contract's address
   IXArtToken public xArtToken; // xARTToken contract's address
 
   EnumerableSet.AddressSet internal _merlinPools; // all merlin pools
@@ -31,7 +31,7 @@ contract MerlinPoolFactory is Ownable, IMerlinPoolFactory {
   address public override emergencyRecoveryAddress; // to recover rewards from emergency closed merlin pools
 
 
-  constructor(IArtTokenV2 artToken_, IXArtToken xArtToken_, address emergencyRecoveryAddress_, address feeAddress_){
+  constructor(IArtToken artToken_, IXArtToken xArtToken_, address emergencyRecoveryAddress_, address feeAddress_){
     require(emergencyRecoveryAddress_ != address(0) && feeAddress_ != address(0), "invalid");
 
     artToken = artToken_;

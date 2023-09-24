@@ -6,14 +6,14 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./interfaces/tokens/IArtTokenV2.sol";
+import "./interfaces/tokens/IArtToken.sol";
 
 
 /*
  * ART is Arthur's native ERC20 token.
  * It has an hard cap and manages its own emissions and allocations.
  */
-contract ArtTokenV2 is Ownable, ERC20("Arthur token", "ART"), IArtTokenV2 {
+contract ArtToken is Ownable, ERC20("Arthur token", "ART"), IArtToken {
   using SafeMath for uint256;
 
   uint256 public constant MAX_EMISSION_RATE = 0.1 ether;
@@ -27,7 +27,6 @@ contract ArtTokenV2 is Ownable, ERC20("Arthur token", "ART"), IArtTokenV2 {
   uint256 public constant ALLOCATION_PRECISION = 100;
   // Allocations emitted over time. When < 100%, the rest is minted into the treasury (default 15%)
   uint256 public farmingAllocation = 50; // = 50%
-  uint256 public legacyAllocation; // V1 holders allocation
 
   address public masterAddress;
   address public treasuryAddress;
@@ -56,7 +55,7 @@ contract ArtTokenV2 is Ownable, ERC20("Arthur token", "ART"), IArtTokenV2 {
   event AllocationsDistributed(uint256 masterShare, uint256 treasuryShare);
   event InitializeMasterAddress(address masterAddress);
   event InitializeEmissionStart(uint256 startTime);
-  event UpdateAllocations(uint256 farmingAllocation, uint256 legacyAllocation, uint256 treasuryAllocation);
+  event UpdateAllocations(uint256 farmingAllocation, uint256 treasuryAllocation);
   event UpdateEmissionRate(uint256 previousEmissionRate, uint256 newEmissionRate);
   event UpdateMaxSupply(uint256 previousMaxSupply, uint256 newMaxSupply);
   event UpdateTreasuryAddress(address previousTreasuryAddress, address newTreasuryAddress);
@@ -82,14 +81,14 @@ contract ArtTokenV2 is Ownable, ERC20("Arthur token", "ART"), IArtTokenV2 {
    * @dev Returns total master allocation
    */
   function masterAllocation() public view returns (uint256) {
-    return farmingAllocation.add(legacyAllocation);
+    return farmingAllocation;
   }
 
   /**
    * @dev Returns master emission rate
    */
   function masterEmissionRate() public view override returns (uint256) {
-    return emissionRate.mul(farmingAllocation.add(legacyAllocation)).div(ALLOCATION_PRECISION);
+    return emissionRate.mul(farmingAllocation).div(ALLOCATION_PRECISION);
   }
 
   /**
@@ -218,19 +217,18 @@ contract ArtTokenV2 is Ownable, ERC20("Arthur token", "ART"), IArtTokenV2 {
    *
    * Must only be called by the owner
    */
-  function updateAllocations(uint256 farmingAllocation_, uint256 legacyAllocation_) external onlyOwner {
+  function updateAllocations(uint256 farmingAllocation_) external onlyOwner {
     // apply emissions before changes
     emitAllocations();
 
     // total sum of allocations can't be > 100%
-    uint256 totalAllocationsSet = farmingAllocation_.add(legacyAllocation_);
+    uint256 totalAllocationsSet = farmingAllocation_;
     require(totalAllocationsSet <= 100, "updateAllocations: total allocation is too high");
 
     // set new allocations
     farmingAllocation = farmingAllocation_;
-    legacyAllocation = legacyAllocation_;
 
-    emit UpdateAllocations(farmingAllocation_, legacyAllocation_, treasuryAllocation());
+    emit UpdateAllocations(farmingAllocation_, treasuryAllocation());
   }
 
   /**

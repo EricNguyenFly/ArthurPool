@@ -11,12 +11,18 @@ async function main() {
     "========================================================================================="
   );
 
+  // await hre
+  //   .run("verify:verify", {
+  //     address: contracts.arthurMaster,
+  //     constructorArguments: [contracts.artToken, "1693202400"]
+  //   })
+  //   .catch(console.log);
+
   await hre
-    .run("verify:verify", {
-      address: contracts.arthurMaster,
-      constructorArguments: [contracts.artToken, "1693202400"]
-    })
-    .catch(console.log);
+  .run("verify:verify", {
+    address: "0x09Dc09A1a3ccc1B25db47c3b17a6C841Ba167367",
+  })
+  .catch(console.log);
 
 }
 
