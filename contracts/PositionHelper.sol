@@ -38,7 +38,7 @@ contract PositionHelper is ReentrancyGuard {
 
   function addLiquidityAndCreatePosition(
     address tokenA, address tokenB, uint256 amountADesired, uint256 amountBDesired,
-    uint256 amountAMin, uint256 amountBMin, uint256 deadline, address to, INFTPool nftPool, uint256 lockDuration, uint256 timeLock
+    uint256 amountAMin, uint256 amountBMin, uint256 deadline, address to, INFTPool nftPool, uint256 lockDuration, uint256 timeLock, uint256 startTime
   ) external nonReentrant {
     address lp = router.getPair(tokenA, tokenB);
 
@@ -50,7 +50,7 @@ contract PositionHelper is ReentrancyGuard {
     (bool success, bytes memory data) = address(router).delegatecall(
       abi.encodeWithSelector(
         router.addLiquidity.selector,
-        tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, address(this), deadline, timeLock
+        tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, address(this), deadline, timeLock, startTime
       )
     );
     require(success, "delegate call failed");
@@ -72,7 +72,7 @@ contract PositionHelper is ReentrancyGuard {
 
 
   function addLiquidityETHAndCreatePosition(
-    address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, uint256 deadline, uint256 timeLock,
+    address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, uint256 deadline, uint256 timeLock, uint256 startTime,
     address to, INFTPool nftPool, uint256 lockDuration
   ) external payable nonReentrant {
     address lp = router.getPair(token, weth);
@@ -83,7 +83,7 @@ contract PositionHelper is ReentrancyGuard {
     bytes memory data = address(router).functionDelegateCall(
       abi.encodeWithSelector(
         router.addLiquidityETH.selector,
-        token, amountTokenDesired, amountTokenMin, amountETHMin, address(this), deadline, timeLock
+        token, amountTokenDesired, amountTokenMin, amountETHMin, address(this), deadline, timeLock, startTime
       )
     );
     (,, uint256 lpAmount) = abi.decode(data, (uint256, uint256, uint256));
